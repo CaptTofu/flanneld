@@ -1,0 +1,23 @@
+[Unit]
+Description=Flannel network fabric service for Docker
+After=network.target 
+{# you do not want to try to require etcd if etcd is not running on the host #}
+# ansible hostname {{ ansible_hostname }}
+# etcd_host {{ etcd_host }}
+# etcd_hosts {{ etcd_hosts }}
+
+{% if ( etcd_hosts is defined ) and (ansible_hostname == etcd_hosts ) %}
+After=etcd.service
+Requires=etcd.service
+{% endif %}
+
+[Service]
+EnvironmentFile=/etc/environment
+ExecStartPre=-/bin/bash -c "until /usr/bin/etcdctl --peers=${EPEERS} set /coreos.com/network/config '{\"Network\": \"${FLANNEL_NETWORK}\"}'; do echo \"waiting for etcd to become available...\"; sleep 5; done"
+ExecStart=/opt/bin/flanneld -iface=${FLANNEL_INTERFACE} ${FLANNELD_OPTS}
+ExecStartPost=-/bin/bash -c "until [ -e /run/flannel/subnet.env ]; do echo \"waiting for write.\"; sleep 3; done"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

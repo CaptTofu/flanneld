@@ -1,0 +1,48 @@
+---
+- name: add internal apt repo
+  become: yes
+  apt_repository: repo="deb http://{{ apt_repo_host }}/deb/ amd64/" state=present
+
+- name: Update apt cache
+  apt: update_cache=yes
+  failed_when: false
+
+- name: Install flannel daemon
+  become: yes
+  apt: pkg="{{ item }}" state="installed" force="yes"
+  with_items:
+    - flanneld
+    - bridge-utils
+
+# Docker is needed to install flannel
+- name: Stop Docker
+  become: yes
+  service: name=docker state=stopped
+
+- name: include systemd plays
+  become: yes
+  include: systemd.yml
+  when: ansible_service_mgr == 'systemd' 
+
+- name: incude upstart plays
+  become: yes
+  include: upstart.yml
+  when: ansible_service_mgr == 'upstart' 
+
+- name: Add flanneld environment variables to /etc/environment
+  become: yes
+  lineinfile: dest='/etc/environment'
+              line="{{ item.key }}={{ item.value }}"
+              state=present create=yes
+  with_dict: "{{ flannel_env_vars }}"
+
+#  Need systemd/upstart to install flannel configuration
+- name: Start flanneld
+  become: yes
+  service: name=flanneld state=started
+  when: stem_create is not defined
+
+- name: Start Docker
+  become: yes
+  service: name=docker state=restarted
+  when: stem_create is not defined

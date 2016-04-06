@@ -1,0 +1,32 @@
+description "Flanneld service"
+author "@ric03uec"
+ 
+start on filesystem or runlevel [2345]
+stop on runlevel [!2345]
+ 
+respawn
+ 
+pre-start script
+        FLANNELD=/opt/bin/$UPSTART_JOB
+        if [ -f /etc/default/$UPSTART_JOB ]; then
+                . /etc/default/$UPSTART_JOB
+        fi
+        if [ -f $FLANNELD ]; then
+                if [ -f /usr/bin/etcdctl ]; then
+                  /bin/bash -c "until /usr/bin/etcdctl --peers=${EPEERS} set /coreos.com/network/config '{\"Network\": \"${FLANNEL_NETWORK}\"}'; do echo \"waiting for etcd to become available...\"; sleep 5; done
+                fi
+                exit 0
+        fi
+    echo "$FLANNELD binary not found, exiting"
+    exit 22
+end script
+ 
+script
+        # modify these in /etc/default/$UPSTART_JOB (/etc/default/flanneld)
+        FLANNELD=/opt/bin/$UPSTART_JOB
+        FLANNELD_OPTS=""
+        if [ -f /etc/default/$UPSTART_JOB ]; then
+                . /etc/default/$UPSTART_JOB
+        fi
+        exec "$FLANNELD" $FLANNELD_OPTS
+end script

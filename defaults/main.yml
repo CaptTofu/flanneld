@@ -1,0 +1,9 @@
+---
+
+etcd_host: master
+etcd_name: kube-cluster
+etcd_local_name: infra0
+etcd_cluster_token: etcd-cluster-1
+etcd_datadir: /var/data/etcd
+flannel_interface: eth0
+flannel_network: 10.1.0.0/16

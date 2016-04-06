@@ -1,0 +1,6 @@
+---
+#
+# Flannel is dependent on etcd, so always run etcd before flannel
+#
+dependencies:
+    - { role: "etcd" }

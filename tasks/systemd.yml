@@ -1,0 +1,11 @@
+---
+
+- name: Render the flannel unit file
+  template: src=flanneld.service.j2 dest=/etc/systemd/system/flanneld.service
+  notify: 
+  - reload systemd
+
+- name: Render the flannel-modified docker systemd unit files
+  template: src=docker.service.j2 dest=/lib/systemd/system/docker.service
+  notify: 
+  - reload systemd

@@ -1,0 +1,31 @@
+[Unit]
+Description=Docker container engine configured to run with flannel
+Documentation=https://docs.docker.com
+Requires=docker.socket flanneld.service
+{% set etcd_service = "" %}
+{% if inventory_hostname == etcd_host %} 
+{% set etcd_service = "etcd.service " %}
+{% endif %}
+Requires=docker.socket {{ etcd_service }}flanneld.service
+After=network.target docker.socket {{ etcd_service }}flanneld.service
+
+[Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=/run/flannel/subnet.env
+{% if proxy_env is defined %}
+{% set space=" " -%}
+Environment=
+{%- for key,value in proxy_env.items() -%}
+"{{ key }}={{ value }}"{{ space }}  
+{%- endfor %}
+{% endif %}
+
+ExecStartPre=-/bin/ip link set dev docker0 down
+ExecStartPre=-/sbin/brctl delbr docker0
+# FLANNEL_SUBNET and FLANNEL_MTU are set by /run/flannel/subnet.env
+ExecStart=/usr/bin/docker daemon -r -H fd:// --bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
